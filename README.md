@@ -50,7 +50,7 @@ The hook script listens to 6 Claude Code lifecycle events (`SessionStart`, `PreT
 
 ### 1. Download
 
-Download `ClaudePulse.exe` from the [Releases](https://github.com/YOUR_USERNAME/ClaudePulse/releases) page.
+Download `ClaudePulse.exe` from the [Releases](https://github.com/Pluszzz/ClaudePulse/releases) page.
 
 ### 2. Configure Claude Code hooks
 
@@ -64,7 +64,7 @@ Add this to `~/.claude/settings.json`:
         "matcher": "",
         "hooks": [{
           "type": "command",
-          "command": "node /c/Users/YOURNAME/.claude/hooks/update-status.js"
+          "command": "node /c/Users/pluszzz/.claude/hooks/update-status.js"
         }]
       }
     ],
@@ -73,7 +73,7 @@ Add this to `~/.claude/settings.json`:
         "matcher": "*",
         "hooks": [{
           "type": "command",
-          "command": "node /c/Users/YOURNAME/.claude/hooks/update-status.js"
+          "command": "node /c/Users/pluszzz/.claude/hooks/update-status.js"
         }]
       }
     ],
@@ -82,7 +82,7 @@ Add this to `~/.claude/settings.json`:
         "matcher": "",
         "hooks": [{
           "type": "command",
-          "command": "node /c/Users/YOURNAME/.claude/hooks/update-status.js"
+          "command": "node /c/Users/pluszzz/.claude/hooks/update-status.js"
         }]
       }
     ],
@@ -91,7 +91,7 @@ Add this to `~/.claude/settings.json`:
         "matcher": "*",
         "hooks": [{
           "type": "command",
-          "command": "node /c/Users/YOURNAME/.claude/hooks/update-status.js"
+          "command": "node /c/Users/pluszzz/.claude/hooks/update-status.js"
         }]
       }
     ],
@@ -100,7 +100,7 @@ Add this to `~/.claude/settings.json`:
         "matcher": "*",
         "hooks": [{
           "type": "command",
-          "command": "node /c/Users/YOURNAME/.claude/hooks/update-status.js"
+          "command": "node /c/Users/pluszzz/.claude/hooks/update-status.js"
         }]
       }
     ],
@@ -109,7 +109,7 @@ Add this to `~/.claude/settings.json`:
         "matcher": "",
         "hooks": [{
           "type": "command",
-          "command": "node /c/Users/YOURNAME/.claude/hooks/update-status.js"
+          "command": "node /c/Users/pluszzz/.claude/hooks/update-status.js"
         }]
       }
     ]
@@ -123,7 +123,7 @@ Add this to `~/.claude/settings.json`:
 
 ```bash
 claude() {
-    (nohup "C:/Users/YOURNAME/.claude/hooks/dist/ClaudePulse.exe" >/dev/null 2>&1 &)
+    (nohup "C:/Users/pluszzz/.claude/hooks/dist/ClaudePulse.exe" >/dev/null 2>&1 &)
     command claude "$@"
 }
 ```
@@ -132,8 +132,8 @@ claude() {
 
 ```powershell
 function claude {
-    Start-Process -WindowStyle Hidden "C:\Users\YOURNAME\.claude\hooks\dist\ClaudePulse.exe"
-    & "C:\Users\YOURNAME\AppData\Roaming\npm\claude.cmd" @args
+    Start-Process -WindowStyle Hidden "C:\Users\pluszzz\.claude\hooks\dist\ClaudePulse.exe"
+    & "C:\Users\pluszzz\AppData\Roaming\npm\claude.cmd" @args
 }
 ```
 
