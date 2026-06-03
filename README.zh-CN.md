@@ -1,5 +1,7 @@
 # ClaudePulse
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 一个轻量级的 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 状态监视器，始终置顶。  
 一眼就能看到 Claude 在做什么——运行工具、等待批准、空闲还是出错了。
 

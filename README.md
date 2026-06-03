@@ -1,5 +1,7 @@
 # ClaudePulse
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 A tiny always-on-top status monitor for [Claude Code](https://docs.anthropic.com/en/docs/claude-code).  
 See what Claude is doing at a glance — running a tool, waiting for your approval, idle, or crashed.
 
