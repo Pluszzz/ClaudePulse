@@ -69,7 +69,7 @@ python install.py
 
 The installer will:
 1. Check Python / Node.js environment
-2. Install PySide6 (~150 MB, one-time)
+2. Download `ClaudePulse.exe` from GitHub Releases (~47 MB, one-time)
 3. Deploy the hook script and configure `settings.json`
 4. Let you choose which terminal(s) to auto-start with (Git Bash / CMD / PowerShell)
 5. Smoke-test that ClaudePulse launches
@@ -81,35 +81,43 @@ After that, open a **new terminal** and type `claude` — ClaudePulse will auto-
 If you prefer to configure manually:
 
 ```bash
-pip install PySide6
+# Download the exe from Releases and place it in ~/.claude/hooks/
 mkdir -p ~/.claude/hooks
 cp src/update-status.js ~/.claude/hooks/update-status.js
 ```
 
-Then add hooks to `~/.claude/settings.json` (see installer output or the hooks section above), and set up auto-start in your terminal profile. Run with:
+Then add hooks to `~/.claude/settings.json` (see `install.py` output), set up auto-start in your terminal pointing to `~/.claude/hooks/ClaudePulse.exe`, or run directly:
 
 ```bash
+~/.claude/hooks/ClaudePulse.exe
+```
+
+### Dev mode (run from source)
+
+```bash
+pip install PySide6
 python src/main.py
 ```
 
 ## Build from source
 
 ```bash
-pip install pyinstaller
-pyinstaller --onefile --windowed --name "ClaudePulse" \
-  --hidden-import PySide6 --hidden-import pystray --hidden-import PIL \
-  src/main.py
+pip install pyinstaller PySide6
+pyinstaller --onefile --windowed --name "ClaudePulse" src/main.py
 ```
 
 Output: `dist/ClaudePulse.exe`
 
-## Dependencies
+## Dependencies (for end users)
+
+- Node.js — for the hook script
+- **Nothing else** — the exe is self-contained
+
+### Dev dependencies
 
 - Python 3.10+
-- **PySide6** — Qt GUI framework
-- **pystray** — system tray integration (optional, GUI falls back gracefully)
-- **Pillow** — tray icon rendering (optional)
-- Node.js — for the hook script only
+- PySide6 — Qt GUI framework
+- PyInstaller — for building the exe
 
 ## Project structure
 
@@ -118,7 +126,10 @@ ClaudePulse/
 ├── src/
 │   ├── main.py              ← Qt GUI entry point
 │   ├── session_manager.py   ← data layer (reads session JSON)
-│   └── update-status.js     ← Claude Code hook (unchanged)
+│   └── update-status.js     ← Claude Code hook
+├── install.py               ← one-click installer
+├── ClaudePulse.spec         ← PyInstaller build spec
+├── LICENSE
 ├── README.md
 └── .gitignore
 ```
