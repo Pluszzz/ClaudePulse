@@ -69,21 +69,47 @@ def check_claude_code():
 
 
 # ═══════════════════════════════════════════════════════════════
-# Step 2 — Install dependencies
+# Step 2 — Download or locate ClaudePulse.exe
 # ═══════════════════════════════════════════════════════════════
 
-def install_deps():
-    title("Installing Python dependencies")
-    deps = ["PySide6"]
-    for dep in deps:
-        info(f"pip install {dep} ...")
-        r = subprocess.run(
-            [sys.executable, "-m", "pip", "install", dep],
-            capture_output=True, text=True)
-        if r.returncode == 0:
-            ok(f"{dep} installed")
-        else:
-            warn(f"{dep} failed — try: pip install {dep}")
+GITHUB_RELEASES = "https://github.com/Pluszzz/ClaudePulse/releases/latest/download/ClaudePulse.exe"
+EXE_DEST = HOOKS_DIR / "ClaudePulse.exe"
+
+def _find_exe():
+    """Look for ClaudePulse.exe nearby (dev mode: already in dist/)."""
+    candidates = [
+        SRC_DIR.parent / "dist" / "ClaudePulse.exe",
+        HOOKS_DIR / "ClaudePulse.exe",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return None
+
+def install_exe():
+    title("Setting up ClaudePulse.exe")
+
+    existing = _find_exe()
+    if existing:
+        ok(f"Found existing exe: {existing}")
+        if existing != EXE_DEST:
+            EXE_DEST.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(existing, EXE_DEST)
+            ok(f"Copied to {EXE_DEST}")
+        return
+
+    # Try downloading from GitHub Releases
+    info(f"Downloading from GitHub Releases ...")
+    try:
+        import urllib.request
+        EXE_DEST.parent.mkdir(parents=True, exist_ok=True)
+        urllib.request.urlretrieve(GITHUB_RELEASES, str(EXE_DEST))
+        ok(f"Downloaded: {EXE_DEST}")
+    except Exception as e:
+        warn(f"Download failed: {e}")
+        warn(f"Please download manually from:")
+        warn(f"  https://github.com/Pluszzz/ClaudePulse/releases")
+        warn(f"and place ClaudePulse.exe in: {EXE_DEST}")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -139,8 +165,8 @@ def _add_hooks_to_settings(hook_cmd: str):
 # Step 4 — Auto-start for chosen terminals
 # ═══════════════════════════════════════════════════════════════
 
-PYTHONW = sys.executable.replace("python.exe", "pythonw.exe")
-MAIN_PY = str((SRC_DIR / "main.py").resolve())
+CLAUDE_PULSE_EXE = str(EXE_DEST.resolve())
+
 
 def _claude_exe():
     """Find the Claude Code executable."""
@@ -161,21 +187,20 @@ def _gitbash_path(p):
 
 def setup_gitbash():
     title("Git Bash auto-start")
+    exe_path = _gitbash_path(CLAUDE_PULSE_EXE)
     entry = (
         f'# ClaudePulse auto-start + skip permissions\n'
         f'unalias claude 2>/dev/null\n'
         f'claude() {{\n'
-        f'    python {_gitbash_path(MAIN_PY)} &\n'
+        f'    (nohup "{exe_path}" >/dev/null 2>&1 &)\n'
         f'    disown 2>/dev/null\n'
         f'    command claude --dangerously-skip-permissions "$@"\n'
         f'}}\n'
     )
-    # Read existing, replace or append
     existing = ""
     if BASH_RC.exists():
         existing = BASH_RC.read_text(encoding="utf-8", errors="replace")
     if "ClaudePulse auto-start" in existing:
-        # Replace the claude function block
         lines = existing.splitlines()
         new_lines = []
         skip = False
@@ -185,7 +210,7 @@ def setup_gitbash():
                 new_lines.append("# ClaudePulse auto-start + skip permissions")
                 new_lines.append("unalias claude 2>/dev/null")
                 new_lines.append("claude() {")
-                new_lines.append(f"    python {_gitbash_path(MAIN_PY)} &")
+                new_lines.append(f'    (nohup "{exe_path}" >/dev/null 2>&1 &)')
                 new_lines.append("    disown 2>/dev/null")
                 new_lines.append('    command claude --dangerously-skip-permissions "$@"')
                 new_lines.append("}")
@@ -208,7 +233,7 @@ def setup_cmd():
     content = (
         f'@echo off\n'
         f'REM ClaudePulse auto-start\n'
-        f'start "" "{PYTHONW}" "{MAIN_PY}" 2>nul\n'
+        f'start "" "{CLAUDE_PULSE_EXE}" 2>nul\n'
         f'REM Claude Code\n'
         f'"{CLAUDE_EXE}" --dangerously-skip-permissions --permission-mode bypassPermissions %*\n'
     )
@@ -222,7 +247,7 @@ def setup_powershell():
     entry = (
         f'# ClaudePulse auto-start\n'
         f'function claude {{\n'
-        f'    Start-Process -WindowStyle Hidden "{PYTHONW}" -ArgumentList "{MAIN_PY}"\n'
+        f'    Start-Process -WindowStyle Hidden "{CLAUDE_PULSE_EXE}"\n'
         f'    & "{CLAUDE_EXE}" --dangerously-skip-permissions --permission-mode bypassPermissions @args\n'
         f'}}\n'
     )
@@ -241,15 +266,13 @@ def setup_powershell():
 # ═══════════════════════════════════════════════════════════════
 
 def smoke_test():
-    title("Smoke test — launching ClaudePulse for 3 seconds...")
+    title("Smoke test — launching ClaudePulse ...")
+    if not EXE_DEST.exists():
+        warn("ClaudePulse.exe not found — skipping smoke test")
+        return
     try:
-        r = subprocess.run(
-            [sys.executable, str(MAIN_PY)],
-            timeout=5,
-            capture_output=True, text=True)
-        ok("ClaudePulse launched and exited cleanly")
-    except subprocess.TimeoutExpired:
-        ok("ClaudePulse launched successfully (process running)")
+        subprocess.Popen([str(EXE_DEST)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        ok(f"ClaudePulse launched from {EXE_DEST}")
     except Exception as e:
         warn(f"Launch failed: {e}")
 
@@ -273,8 +296,8 @@ def main():
         warn("Python is required. Install from https://python.org")
         sys.exit(1)
 
-    # 2. Dependencies
-    install_deps()
+    # 2. ClaudePulse.exe
+    install_exe()
 
     # 3. Hook
     deploy_hook()
