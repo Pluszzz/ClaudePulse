@@ -65,20 +65,22 @@ Hook 脚本监听 7 个 Claude Code 生命周期事件（`SessionStart`、`UserP
 
 ### 一键安装
 
+下载解压后**双击 `install.bat`** 即可。
+
+或命令行：
+
 ```bash
 git clone https://github.com/Pluszzz/ClaudePulse.git
 cd ClaudePulse
-python install.py
+install.bat
 ```
 
 安装脚本会自动：
-1. 检测 Python / Node.js 环境
+1. 检测 Node.js 环境
 2. 从 GitHub Releases 下载 `ClaudePulse.exe`（约 47 MB，仅需一次）
 3. 部署 Hook 脚本并配置 `settings.json`
-4. 让你选择要配置自启动的终端（Git Bash / CMD / PowerShell / 全部）
-5. 启动 ClaudePulse 做冒烟测试
-
-完成后打开**新的终端窗口**，输入 `claude` 即可自动启动 ClaudePulse。
+4. 让你选择要配置自启动的终端（CMD / PowerShell）
+5. 完成 — 打开**新的终端窗口**，输入 `claude`
 
 ### 手动安装
 

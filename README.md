@@ -63,20 +63,22 @@ The hook script listens to 7 Claude Code lifecycle events (`SessionStart`, `User
 
 ### One-click installer
 
+Download and unzip, then **double-click `install.bat`**.
+
+Or via command line:
+
 ```bash
 git clone https://github.com/Pluszzz/ClaudePulse.git
 cd ClaudePulse
-python install.py
+install.bat
 ```
 
 The installer will:
-1. Check Python / Node.js environment
+1. Check Node.js environment
 2. Download `ClaudePulse.exe` from GitHub Releases (~47 MB, one-time)
 3. Deploy the hook script and configure `settings.json`
-4. Let you choose which terminal(s) to auto-start with (Git Bash / CMD / PowerShell)
-5. Smoke-test that ClaudePulse launches
-
-After that, open a **new terminal** and type `claude` — ClaudePulse will auto-start.
+4. Let you choose which terminal(s) to auto-start with (CMD / PowerShell)
+5. Done — open a **new terminal** and type `claude`
 
 ### Manual setup
 
