@@ -226,4 +226,4 @@ ClaudePulse/
 
 ## License
 
-MIT
+MIT © Pluszzz
