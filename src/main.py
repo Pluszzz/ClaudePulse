@@ -56,23 +56,25 @@ C_HOVER    = "#f87171"
 # ═══════════════════════════════════════════════════════════════
 
 def load_config():
-    defaults = {"opacity": DEFAULT_OPACITY, "x": None, "y": None, "tabOrder": []}
+    defaults = {"opacity": DEFAULT_OPACITY, "x": None, "y": None,
+                "tabOrder": [], "flashMode": "border",
+                "flashBorderWidth": 4}
     try:
         with open(CONFIG_FILE, "r") as f:
             return {**defaults, **json.load(f)}
     except Exception:
         return defaults
 
-def save_config(opacity, x, y, tabOrder, width=None, height=None, splitterSizes=None):
+def save_config(opacity, x, y, tabOrder, width=None, height=None,
+                splitterSizes=None, flashMode=None, flashBorderWidth=None):
     try:
         os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
         data = {"opacity": opacity, "x": x, "y": y, "tabOrder": tabOrder}
-        if width is not None:
-            data["width"] = width
-        if height is not None:
-            data["height"] = height
-        if splitterSizes is not None:
-            data["splitterSizes"] = splitterSizes
+        if width is not None: data["width"] = width
+        if height is not None: data["height"] = height
+        if splitterSizes is not None: data["splitterSizes"] = splitterSizes
+        if flashMode is not None: data["flashMode"] = flashMode
+        if flashBorderWidth is not None: data["flashBorderWidth"] = flashBorderWidth
         with open(CONFIG_FILE, "w") as f:
             json.dump(data, f)
     except Exception:
@@ -220,59 +222,108 @@ class TabDelegate(QStyledItemDelegate):
 # ═══════════════════════════════════════════════════════════════
 
 class SettingsDialog(QDialog):
-    def __init__(self, parent, opacity, on_change):
+    def __init__(self, parent, opacity, flash_mode, flash_border_w, on_change):
         super().__init__(parent, Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self._cb = on_change
-        self.setFixedSize(200, 80)
+        self._flash_mode = flash_mode
+        self._flash_border_w = flash_border_w
+        self.setFixedSize(220, 160)
         self.setStyleSheet(f"background:{C_BG}; border:1px solid {C_BORDER};")
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 8, 12, 8)
+        layout.setSpacing(6)
 
         title = QLabel("设置")
         title.setFont(QFont("Microsoft YaHei UI", 10, QFont.Bold))
         title.setStyleSheet(f"color:{C_WHITE}; border:none;")
         layout.addWidget(title)
 
-        row = QHBoxLayout()
+        # ── Opacity ──
+        row1 = QHBoxLayout(); row1.setSpacing(4)
         lbl = QLabel("透明度")
         lbl.setFont(QFont("Microsoft YaHei UI", 8))
         lbl.setStyleSheet(f"color:{C_DIM}; border:none;")
-        row.addWidget(lbl)
-
+        row1.addWidget(lbl)
         self._pct = QLabel(f"{int(opacity * 100)}%")
         self._pct.setFont(QFont("Microsoft YaHei UI", 8))
         self._pct.setStyleSheet(f"color:{C_DIM}; border:none;")
         self._pct.setFixedWidth(36)
         self._pct.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-
-        self._slider = QSlider(Qt.Horizontal)
-        self._slider.setRange(20, 100)
-        self._slider.setValue(int(opacity * 100))
-        self._slider.setFixedWidth(100)
-        self._slider.valueChanged.connect(self._on_slide)
-        self._slider.setStyleSheet(
+        s1 = QSlider(Qt.Horizontal); s1.setRange(20, 100)
+        s1.setValue(int(opacity * 100)); s1.setFixedWidth(90)
+        s1.valueChanged.connect(lambda v: self._on_opacity(v))
+        s1.setStyleSheet(
             f"QSlider::groove:horizontal {{ height:4px; background:{C_BORDER}; border-radius:2px; border:none; }}"
-            f"QSlider::handle:horizontal {{ background:{C_DIM}; width:10px; margin:-4px 0; border-radius:5px; border:none; }}"
-        )
+            f"QSlider::handle:horizontal {{ background:{C_DIM}; width:10px; margin:-4px 0; border-radius:5px; border:none; }}")
+        row1.addWidget(s1); row1.addWidget(self._pct)
+        layout.addLayout(row1)
 
-        row.addWidget(self._slider)
-        row.addWidget(self._pct)
-        layout.addLayout(row)
+        # ── Flash mode ──
+        row2 = QHBoxLayout(); row2.setSpacing(4)
+        lbl2 = QLabel("闪烁方式")
+        lbl2.setFont(QFont("Microsoft YaHei UI", 8))
+        lbl2.setStyleSheet(f"color:{C_DIM}; border:none;")
+        row2.addWidget(lbl2)
+        from PySide6.QtWidgets import QComboBox
+        self._flash_combo = QComboBox()
+        self._flash_combo.addItem("全背景", "overlay")
+        self._flash_combo.addItem("边框", "border")
+        self._flash_combo.setCurrentIndex(0 if flash_mode == "overlay" else 1)
+        self._flash_combo.setFont(QFont("Microsoft YaHei UI", 8))
+        self._flash_combo.setFixedWidth(70)
+        self._flash_combo.setStyleSheet(
+            f"QComboBox {{ color:{C_WHITE}; background:{C_TAB_ACTIVE}; border:1px solid {C_BORDER}; padding:2px; }}"
+            f"QComboBox::drop-down {{ border:none; }}"
+            f"QComboBox QAbstractItemView {{ color:{C_WHITE}; background:{C_TAB_ACTIVE}; selection-background:{C_BORDER}; }}")
+        self._flash_combo.currentIndexChanged.connect(self._on_flash_mode)
+        row2.addWidget(self._flash_combo)
+        row2.addStretch()
+        layout.addLayout(row2)
 
-    def _on_slide(self, val):
+        # ── Border width (only for border mode) ──
+        row3 = QHBoxLayout(); row3.setSpacing(4)
+        lbl3 = QLabel("边框宽度")
+        lbl3.setFont(QFont("Microsoft YaHei UI", 8))
+        lbl3.setStyleSheet(f"color:{C_DIM}; border:none;")
+        row3.addWidget(lbl3)
+        self._bw_pct = QLabel(f"{flash_border_w}px")
+        self._bw_pct.setFont(QFont("Microsoft YaHei UI", 8))
+        self._bw_pct.setStyleSheet(f"color:{C_DIM}; border:none;")
+        self._bw_pct.setFixedWidth(30)
+        self._bw_pct.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        s3 = QSlider(Qt.Horizontal); s3.setRange(2, 20)
+        s3.setValue(flash_border_w); s3.setFixedWidth(90)
+        s3.valueChanged.connect(lambda v: self._on_border_w(v))
+        s3.setStyleSheet(
+            f"QSlider::groove:horizontal {{ height:4px; background:{C_BORDER}; border-radius:2px; border:none; }}"
+            f"QSlider::handle:horizontal {{ background:{C_DIM}; width:10px; margin:-4px 0; border-radius:5px; border:none; }}")
+        s3.setEnabled(flash_mode == "border")
+        self._bw_slider = s3
+        row3.addWidget(s3); row3.addWidget(self._bw_pct)
+        layout.addLayout(row3)
+
+    def _on_opacity(self, val):
         self._pct.setText(f"{val}%")
-        if self._cb:
-            self._cb(val / 100.0)
+        if self._cb: self._cb(opacity=val / 100.0)
+
+    def _on_flash_mode(self, idx):
+        self._flash_mode = "overlay" if idx == 0 else "border"
+        self._bw_slider.setEnabled(self._flash_mode == "border")
+        if self._cb: self._cb(flash_mode=self._flash_mode)
+
+    def _on_border_w(self, val):
+        self._flash_border_w = val
+        self._bw_pct.setText(f"{val}px")
+        if self._cb: self._cb(flash_border_w=val)
 
     def show_at(self, parent_pos, parent_size):
-        x = parent_pos.x() + parent_size.width() - 220
+        x = parent_pos.x() + parent_size.width() - 240
         y = parent_pos.y() + parent_size.height() + 4
         self.move(x, y)
         self.show()
 
     def event(self, event):
-        """Close dialog when focus is lost (clicked outside)."""
         from PySide6.QtCore import QEvent
         if event.type() == QEvent.WindowDeactivate:
             self.close()
@@ -296,6 +347,8 @@ class MainWindow(QMainWindow):
         self.config = load_config()
         self._opacity = self.config["opacity"]
         self._tab_order = self.config.get("tabOrder", [])
+        self._flash_mode = self.config.get("flashMode", "overlay")
+        self._flash_border_w = self.config.get("flashBorderWidth", 6)
         self._selected_sid = ""
         self._last_statuses: dict[str, str] = {}
         self._user_resized = False
@@ -611,7 +664,9 @@ class MainWindow(QMainWindow):
             self._settings_dlg.close()
             self._settings_dlg = None
             return
-        self._settings_dlg = SettingsDialog(self, self._opacity, self._on_opacity)
+        self._settings_dlg = SettingsDialog(
+            self, self._opacity, self._flash_mode, self._flash_border_w,
+            self._on_settings_changed)
         self._settings_dlg.show_at(self.pos(), self.size())
 
     def _save_splitter(self, pos, index):
@@ -620,11 +675,19 @@ class MainWindow(QMainWindow):
     def _save_full_config(self):
         save_config(
             self._opacity, self.x(), self.y(), self._tab_order,
-            self.width(), self.height(), self.splitter.sizes())
+            self.width(), self.height(), self.splitter.sizes(),
+            flashMode=self._flash_mode,
+            flashBorderWidth=self._flash_border_w)
 
-    def _on_opacity(self, val):
-        self._opacity = val
-        self.setWindowOpacity(val)
+    def _on_settings_changed(self, opacity=None, flash_mode=None,
+                             flash_border_w=None):
+        if opacity is not None:
+            self._opacity = opacity
+            self.setWindowOpacity(opacity)
+        if flash_mode is not None:
+            self._flash_mode = flash_mode
+        if flash_border_w is not None:
+            self._flash_border_w = flash_border_w
         self._save_full_config()
 
     # ── Flash ───────────────────────────────────────────────
@@ -638,13 +701,58 @@ class MainWindow(QMainWindow):
         self._flash_count += 1
         if self._flash_count >= 7:
             self._flash_timer.stop()
-            self.setStyleSheet("")
+            if self._flash_mode == "overlay":
+                if hasattr(self, '_flash_overlay') and self._flash_overlay:
+                    self._flash_overlay.hide()
+            elif self._flash_mode == "border":
+                self.setStyleSheet("")
             return
+
+        if self._flash_mode == "overlay":
+            self._flash_tick_overlay()
+        elif self._flash_mode == "border":
+            self._flash_tick_border()
+
+    def _flash_tick_overlay(self):
+        if not hasattr(self, '_flash_overlay') or not self._flash_overlay:
+            self._flash_overlay = QWidget(self)
+            self._flash_overlay.setAttribute(Qt.WA_TransparentForMouseEvents)
         if self._flash_count % 2 == 1:
-            self.setStyleSheet(
-                f"QMainWindow {{ border:2px solid {self._flash_color.name()}; }}")
+            self._flash_overlay.setStyleSheet(
+                f"background:{self._flash_color.name()};")
+            self._flash_overlay.setGeometry(0, 0, self.width(), self.height())
+            self._flash_overlay.show()
+            self._flash_overlay.raise_()
         else:
-            self.setStyleSheet("")
+            self._flash_overlay.hide()
+
+    def _flash_border_strips(self):
+        """Lazy-create 4 border strips for flash effect."""
+        if hasattr(self, '_border_strips'):
+            return
+        self._border_strips = []
+        for _ in range(4):
+            f = QFrame(self)
+            f.setAttribute(Qt.WA_TransparentForMouseEvents)
+            f.hide()
+            self._border_strips.append(f)
+
+    def _flash_tick_border(self):
+        self._flash_border_strips()
+        top, bottom, left, right = self._border_strips
+        if self._flash_count % 2 == 1:
+            w = self._flash_border_w
+            c = self._flash_color.name()
+            ss = f"background:{c}; border:none;"
+            wh = self.width(); ht = self.height()
+            top.setStyleSheet(ss);    top.setGeometry(0, 0, wh, w); top.show()
+            bottom.setStyleSheet(ss); bottom.setGeometry(0, ht-w, wh, w); bottom.show()
+            left.setStyleSheet(ss);   left.setGeometry(0, 0, w, ht); left.show()
+            right.setStyleSheet(ss);  right.setGeometry(wh-w, 0, w, ht); right.show()
+            top.raise_(); bottom.raise_(); left.raise_(); right.raise_()
+        else:
+            for s in self._border_strips:
+                s.hide()
 
     # ── Tab interactions ────────────────────────────────────
 
