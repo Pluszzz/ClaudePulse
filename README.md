@@ -59,139 +59,38 @@ The hook script listens to 7 Claude Code lifecycle events (`SessionStart`, `User
 
 ## Installation
 
-### 1. Requirements
-
-- Python 3.10+
-- Node.js (for the hook script)
-- Git Bash / CMD / PowerShell on Windows
-
-### 2. Install dependencies
-
-```bash
-pip install PySide6 pystray Pillow
-```
-
-> **PySide6** is the Qt GUI framework (~150 MB). `pystray` + `Pillow` are for system tray integration.
-
-### 3. Clone and set up hooks
+### One-click installer
 
 ```bash
 git clone https://github.com/Pluszzz/ClaudePulse.git
+cd ClaudePulse
+python install.py
+```
+
+The installer will:
+1. Check Python / Node.js environment
+2. Install PySide6 (~150 MB, one-time)
+3. Deploy the hook script and configure `settings.json`
+4. Let you choose which terminal(s) to auto-start with (Git Bash / CMD / PowerShell)
+5. Smoke-test that ClaudePulse launches
+
+After that, open a **new terminal** and type `claude` — ClaudePulse will auto-start.
+
+### Manual setup
+
+If you prefer to configure manually:
+
+```bash
+pip install PySide6
 mkdir -p ~/.claude/hooks
-cp ClaudePulse/src/update-status.js ~/.claude/hooks/update-status.js
+cp src/update-status.js ~/.claude/hooks/update-status.js
 ```
 
-### 4. Configure Claude Code hooks
-
-Add this to `~/.claude/settings.json`:
-
-```json
-{
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "",
-        "hooks": [{
-          "type": "command",
-          "command": "node /c/Users/YOUR_USERNAME/.claude/hooks/update-status.js"
-        }]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "matcher": "*",
-        "hooks": [{
-          "type": "command",
-          "command": "node /c/Users/YOUR_USERNAME/.claude/hooks/update-status.js"
-        }]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "*",
-        "hooks": [{
-          "type": "command",
-          "command": "node /c/Users/YOUR_USERNAME/.claude/hooks/update-status.js"
-        }]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [{
-          "type": "command",
-          "command": "node /c/Users/YOUR_USERNAME/.claude/hooks/update-status.js"
-        }]
-      }
-    ],
-    "PermissionRequest": [
-      {
-        "matcher": "*",
-        "hooks": [{
-          "type": "command",
-          "command": "node /c/Users/YOUR_USERNAME/.claude/hooks/update-status.js"
-        }]
-      }
-    ],
-    "PostToolUseFailure": [
-      {
-        "matcher": "*",
-        "hooks": [{
-          "type": "command",
-          "command": "node /c/Users/YOUR_USERNAME/.claude/hooks/update-status.js"
-        }]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "matcher": "",
-        "hooks": [{
-          "type": "command",
-          "command": "node /c/Users/YOUR_USERNAME/.claude/hooks/update-status.js"
-        }]
-      }
-    ]
-  }
-}
-```
-
-> Replace `YOUR_USERNAME` with your Windows username. Use forward slashes.
-
-### 5. Auto-start with Claude Code
-
-**Git Bash** — add to `~/.bashrc`:
+Then add hooks to `~/.claude/settings.json` (see installer output or the hooks section above), and set up auto-start in your terminal profile. Run with:
 
 ```bash
-claude() {
-    (python /d/CodeWork/ClaudePulse/ClaudePulse/src/main.py &) 2>/dev/null
-    command claude --dangerously-skip-permissions "$@"
-}
+python src/main.py
 ```
-
-**PowerShell** — add to `$PROFILE`:
-
-```powershell
-function claude {
-    Start-Process -WindowStyle Hidden pythonw -ArgumentList "D:\CodeWork\ClaudePulse\ClaudePulse\src\main.py"
-    & "C:\Users\YOUR_USERNAME\AppData\Local\Microsoft\WinGet\Packages\Anthropic.ClaudeCode_Microsoft.Winget.Source_8wekyb3d8bbwe\claude.exe" --dangerously-skip-permissions --permission-mode bypassPermissions @args
-}
-```
-
-**CMD** — edit `C:\Users\YOUR_USERNAME\bin\claude.cmd`:
-
-```batch
-@echo off
-start "" pythonw D:\CodeWork\ClaudePulse\ClaudePulse\src\main.py 2>nul
-"C:\Users\YOUR_USERNAME\AppData\Local\Microsoft\WinGet\Packages\Anthropic.ClaudeCode_Microsoft.Winget.Source_8wekyb3d8bbwe\claude.exe" --dangerously-skip-permissions --permission-mode bypassPermissions %*
-```
-
-### 6. Run manually
-
-```bash
-python D:/CodeWork/ClaudePulse/ClaudePulse/src/main.py
-```
-
-Or start Claude Code normally — the monitor window will launch automatically if you set up auto-start.
 
 ## Build from source
 
