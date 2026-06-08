@@ -223,7 +223,10 @@ class SessionManager:
         try:
             out = subprocess.check_output(
                 ["tasklist", "/FI", f"PID eq {pid}", "/NH", "/FO", "CSV"],
-                stderr=subprocess.DEVNULL).decode("utf-8", errors="ignore")
+                stderr=subprocess.DEVNULL,
+                creationflags=subprocess.CREATE_NO_WINDOW
+                if hasattr(subprocess, "CREATE_NO_WINDOW") else 0).decode(
+                    "utf-8", errors="ignore")
             return str(pid) in out
         except Exception:
             return False
