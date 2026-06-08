@@ -924,7 +924,7 @@ class MainWindow(QMainWindow):
         self.raise_()
         self.activateWindow()
 
-        anim = self._make_mask_anim(100, 0.0, 1.0, QEasingCurve.OutCubic, update_mask)
+        anim = self._make_mask_anim(60, 0.0, 1.0, QEasingCurve.OutCubic, update_mask)
         anim.finished.connect(self._on_expand_done)
         anim.start()
         self._trans_anim = anim
@@ -971,7 +971,7 @@ class MainWindow(QMainWindow):
             self.setMask(QRegion(path.toFillPolygon().toPolygon()))
 
         update_mask(1.0)
-        anim = self._make_mask_anim(100, 1.0, 0.0, QEasingCurve.InCubic, update_mask)
+        anim = self._make_mask_anim(60, 1.0, 0.0, QEasingCurve.InCubic, update_mask)
         anim.finished.connect(self._on_collapse_done)
         anim.start()
         self._trans_anim = anim
