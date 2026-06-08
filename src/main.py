@@ -865,6 +865,19 @@ class MainWindow(QMainWindow):
             self._refresh_content()
             self._rebuild_tabs()
 
+        # Stale sessions (crashed / restarted without SessionEnd).
+        # PID check is heavy — only run every 30s.
+        if not hasattr(self, '_last_stale_check'):
+            self._last_stale_check = 0.0
+        if now - self._last_stale_check >= 30:
+            self._last_stale_check = now
+            for sid in self.manager.get_stale_sessions():
+                s = self.manager.sessions.get(sid)
+                if s:
+                    s.status = "ended"
+                    s.ended_at = now
+                    self._last_statuses[sid] = "ended"
+
         # Expired ended
         for sid in self.manager.get_expired_ended():
             self.manager.remove_session(sid)

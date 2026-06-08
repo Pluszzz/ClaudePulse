@@ -17,8 +17,9 @@ STATUS_MAP = {
     "ended":             ("#9ca3af", "已结束"),
 }
 
-STARTING_TIMEOUT = 3   # seconds before "starting" auto-displays as "idle"
-ENDED_RETENTION  = 30  # seconds to keep ended sessions in the list
+STARTING_TIMEOUT = 3    # seconds before "starting" auto-displays as "idle"
+ENDED_RETENTION  = 30   # seconds to keep ended sessions in the list
+STALE_TIMEOUT    = 1800 # 30 min fallback: mark as ended if PID check fails and no update
 
 
 class Session:
@@ -196,6 +197,63 @@ class SessionManager:
                     json.dump(data, fh, ensure_ascii=False, indent=2)
         except Exception:
             pass
+
+    # -----------------------------------------------------------------
+    def _get_session_pid(self, sid: str) -> int | None:
+        """Look up the PID for a session from ~/.claude/sessions metadata."""
+        sd = os.path.join(os.path.expanduser("~"), ".claude", "sessions")
+        try:
+            for name in os.listdir(sd):
+                if not name.endswith(".json"):
+                    continue
+                try:
+                    with open(os.path.join(sd, name), "r", encoding="utf-8") as fh:
+                        meta = json.load(fh)
+                    if meta.get("sessionId") == sid:
+                        return meta.get("pid")
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        return None
+
+    def _is_pid_running(self, pid: int) -> bool:
+        """Check if a Windows process with given PID is alive."""
+        import subprocess
+        try:
+            out = subprocess.check_output(
+                ["tasklist", "/FI", f"PID eq {pid}", "/NH", "/FO", "CSV"],
+                stderr=subprocess.DEVNULL).decode("utf-8", errors="ignore")
+            return str(pid) in out
+        except Exception:
+            return False
+
+    def get_stale_sessions(self) -> list[str]:
+        """Return sessions whose Claude Code process is no longer running.
+        PID check first, then fallback to time-based for edge cases."""
+        stale = []
+        now = time.time()
+        for sid, s in self.sessions.items():
+            if s.status == "ended":
+                continue
+            pid = self._get_session_pid(sid)
+            if pid is not None:
+                # PID found — check if process is alive
+                if not self._is_pid_running(pid):
+                    stale.append(sid)
+            else:
+                # No PID metadata — fallback to time check
+                if not s.last_update:
+                    continue
+                try:
+                    import datetime
+                    ts = s.last_update.replace("Z", "").split(".")[0]
+                    dt = datetime.datetime.fromisoformat(ts)
+                    if now - dt.timestamp() >= STALE_TIMEOUT:
+                        stale.append(sid)
+                except Exception:
+                    pass
+        return stale
 
     # -----------------------------------------------------------------
     def ordered_sessions(self, tab_order: list[str]) -> list[Session]:
