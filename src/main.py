@@ -875,13 +875,23 @@ class MainWindow(QMainWindow):
         anim.valueChanged.connect(mask_fn)
         return anim
 
+    def _edge_mask_center(self, dock):
+        """Return (cx, cy) in local coords for the mask circle center."""
+        w, h = self.width(), self.height()
+        if dock == "left":       return (0, h // 2)
+        elif dock == "right":    return (w, h // 2)
+        elif dock == "top":      return (w // 2, 0)
+        else:                    return (w // 2, h // 2)
+
     def _expand(self):
-        """Mask-animate from circle → full rectangle.
-        Hides the compact circle, shows full window behind an expanding mask."""
+        """Mask-animate from circle/half-circle → full rectangle.
+        Mask origin aligns with dock edge for seamless transition."""
         if self._transitioning or not self._compact_mode:
             return
         self._transitioning = True
         self._compact_mode = False
+
+        dock = self._compact.dock()
 
         # Position full window centered on the full-circle center
         circle_center = self._compact.full_circle_center()
@@ -890,7 +900,6 @@ class MainWindow(QMainWindow):
         else:
             target = QRect(self.geometry())
         target.moveCenter(circle_center)
-        # Clamp to screen
         screen = self._get_screen().availableGeometry()
         if target.left() < screen.left():    target.moveLeft(screen.left())
         if target.right() > screen.right():  target.moveRight(screen.right())
@@ -899,19 +908,15 @@ class MainWindow(QMainWindow):
         self.setGeometry(target)
         self._compact.hide()
 
-        # Circle center in window-local coords
-        cx = target.width() // 2
-        cy = target.height() // 2
-        r0 = COMPACT_W // 2  # compact circle radius
+        mask_cx, mask_cy = self._edge_mask_center(dock)
+        r0 = COMPACT_W // 2
 
         def update_mask(t):
-            """t: 0=circle → 1=full rectangle.
-            Interpolates ellipse from circle size to window-filling size."""
             w = self.width(); h = self.height()
             ew = r0 * 2 + (w - r0 * 2) * t
             eh = r0 * 2 + (h - r0 * 2) * t
             path = QPainterPath()
-            path.addEllipse(QRectF(cx - ew / 2, cy - eh / 2, ew, eh))
+            path.addEllipse(QRectF(mask_cx - ew / 2, mask_cy - eh / 2, ew, eh))
             self.setMask(QRegion(path.toFillPolygon().toPolygon()))
 
         update_mask(0.0)
@@ -946,14 +951,15 @@ class MainWindow(QMainWindow):
         return None
 
     def _collapse(self):
-        """Mask-animate full → circle, then show half/full circle at dock edge."""
+        """Mask-animate full rectangle → circle/half-circle at dock edge."""
         if self._transitioning or self._compact_mode:
             return
         self._transitioning = True
         self._saved_full_geo = QRect(self.geometry())
 
-        cx = self.width() // 2
-        cy = self.height() // 2
+        # Detect dock from current full-window position
+        dock = self._detect_dock_edge()
+        mask_cx, mask_cy = self._edge_mask_center(dock)
         r0 = COMPACT_W // 2
 
         def update_mask(t):
@@ -961,7 +967,7 @@ class MainWindow(QMainWindow):
             ew = r0 * 2 + (w - r0 * 2) * t
             eh = r0 * 2 + (h - r0 * 2) * t
             path = QPainterPath()
-            path.addEllipse(QRectF(cx - ew / 2, cy - eh / 2, ew, eh))
+            path.addEllipse(QRectF(mask_cx - ew / 2, mask_cy - eh / 2, ew, eh))
             self.setMask(QRegion(path.toFillPolygon().toPolygon()))
 
         update_mask(1.0)
